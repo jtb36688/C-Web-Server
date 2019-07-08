@@ -64,6 +64,8 @@ sprintf(response, "HTTP/1.1 200 OK\n"
                     content_length, body);
 
     // Send it all!
+    int response_length = strlen(response);
+
     int rv = send(fd, response, response_length, 0);
 
     if (rv < 0) {
