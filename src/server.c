@@ -54,14 +54,13 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     char response[max_response_size];
 
     // Build HTTP response and store it in response
+    time_t unixtime;
+    time(&unixtime);
 
-sprintf(response, "HTTP/1.1 200 OK\n"
-                    "Content-Type: text/html\n"
-                    "Content-Length: %d\n"
-                    "Connection: close\n"
-                    "\n"
-                    "%s",
-                    content_length, body);
+    struct tm * timeinfo;
+    timeinfo = localtime(&unixtime);
+
+    sprintf(response, "%s\n" "%s\n" "%s\n" "%d\n" "\n" "%s", header, asctime(timeinfo), content_type, content_length, body);
 
     // Send it all!
     int response_length = strlen(response);
@@ -210,7 +209,7 @@ int main(void)
             perror("accept");
             continue;
         }
-
+        resp_404(newfd);
         // Print out a message that we got the connection
         inet_ntop(their_addr.ss_family,
             get_in_addr((struct sockaddr *)&their_addr),
