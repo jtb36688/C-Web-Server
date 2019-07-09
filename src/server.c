@@ -82,9 +82,9 @@ void get_d20(int fd)
 {
     // Generate a random number between 1 and 20 inclusive
     int r;
-    const unsigned int range = 1 + 20 - 1;
-    const unsigned int buckets = RAND_MAX / range;
-    const unsigned int limit = buckets * range;
+    int range = 20;
+    int buckets = RAND_MAX / range;
+    int limit = buckets * range;
     do {
         r = rand();
     } while (r >= limit);
@@ -157,6 +157,9 @@ void handle_http_request(int fd, struct cache *cache)
 {
     const int request_buffer_size = 65536; // 64K
     char request[request_buffer_size];
+    char method[128];
+    char path[8192];
+    sscanf(request, "%s %s", method, path);
     printf(request);
     // Read request
     int bytes_recvd = recv(fd, request, request_buffer_size - 1, 0);
@@ -174,20 +177,19 @@ void handle_http_request(int fd, struct cache *cache)
     // Read the first two components of the first line of the request 
  
     // If GET, handle the get endpoints
-
+    if(strcmp(method, "GET") == 0) {       
+        if (strcmp(path, "/d20") == 0) {
+            get_d20(fd);
+        }
+        else {
+            get_file(fd, cache, path);
+        }
+    }
     //    Check if it's /d20 and handle that special case
     //    Otherwise serve the requested file by calling get_file()
 
 
     // (Stretch) If POST, handle the post request
-    char method[128];
-    char path[8192];
-
-    if (strcmp(path, "/d20" == 0)) {
-
-    }
-
-    sscanf(request, "%s %s", method, path);
 }
 
     
