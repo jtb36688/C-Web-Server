@@ -81,15 +81,20 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
 void get_d20(int fd)
 {
     // Generate a random number between 1 and 20 inclusive
-    int r;
-    int range = 20;
-    int buckets = RAND_MAX / range;
-    int limit = buckets * range;
-    do {
-        r = rand();
-    } while (r >= limit);
-    int selectednum = 1 + (r / buckets);
-    send_response(fd, "HTTP/1.1 200 OK", "text/plain", selectednum, sizeof(selectednum));
+    // int r;
+    // int range = 20;
+    // int buckets = RAND_MAX / range;
+    // int limit = buckets * range;
+    // do {
+    //     r = rand();
+    // } while (r >= limit);
+    // int randomized = 1 + (r / buckets);
+    // char numstring[10];
+    // sprintf(randomized, "%d", numstring);
+    int randNum = rand() % 20;
+    char numstring[10];
+    sprintf(numstring, "%d", randNum);
+    send_response(fd, "HTTP/1.1 200 OK", "text/plain", numstring, sizeof(numstring));
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
@@ -228,7 +233,7 @@ int main(void)
             perror("accept");
             continue;
         }
-        resp_404(newfd);
+        // resp_404(newfd);
         // Print out a message that we got the connection
         inet_ntop(their_addr.ss_family,
             get_in_addr((struct sockaddr *)&their_addr),
