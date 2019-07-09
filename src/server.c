@@ -140,6 +140,23 @@ void get_file(int fd, struct cache *cache, char *request_path)
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
+    char path[9999];
+    char *MIMETYPE;
+    struct file_data *filestruct;
+
+    snprintf(path, sizeof path, "%s%s", SERVER_ROOT, request_path);
+    filestruct = file_load(path);
+
+    if (filestruct == NULL) {
+        fprintf(stderr, "Cannot find requested file on server\n");
+        exit(1);
+    }
+
+    MIMETYPE = mime_type_get(path);
+
+    send_response(fd, "HTTP/1.1 200 OK", MIMETYPE, filestruct->data, filestruct->size);
+
+    file_free(filestruct);
 }
 
 /**
