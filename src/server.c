@@ -60,7 +60,19 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     struct tm * timeinfo;
     timeinfo = localtime(&unixtime);
 
-    sprintf(response, "%s\n" "%s\n" "%s\n" "%d\n" "\n" "%s", header, asctime(timeinfo), content_type, content_length, body);
+    sprintf(response, 
+    "%s\n" 
+    "Time: %s\n" 
+    "Content-Type:%s\n" 
+    "Content-Length:%d\n" 
+    "Connection: close\n" 
+    "\n" 
+    "%s",
+    header, 
+    asctime(timeinfo), 
+    content_type, 
+    content_length, 
+    body);
 
     // Send it all!
     int response_length = strlen(response);
@@ -137,26 +149,28 @@ void resp_404(int fd)
  */
 void get_file(int fd, struct cache *cache, char *request_path)
 {
+    (void)cache;
+
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
-    char path[9999];
-    char *MIMETYPE;
-    struct file_data *filestruct;
+    char filepath[4096];
+    struct file_data *filedata; 
+    char *mime_type;
 
-    snprintf(path, sizeof path, "%s%s", SERVER_ROOT, request_path);
-    filestruct = file_load(path);
+    // Fetch the file named in the path
+    snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
+    filedata = file_load(filepath);
 
-    if (filestruct == NULL) {
-        fprintf(stderr, "Cannot find requested file on server\n");
-        exit(1);
+    if (filedata == NULL) {
+        fprintf(stderr, "cannot find server file\n");
+        resp_404(newfd);
     }
-
-    MIMETYPE = mime_type_get(path);
-
-    send_response(fd, "HTTP/1.1 200 OK", MIMETYPE, filestruct->data, filestruct->size);
-
-    file_free(filestruct);
+    else {
+        mime_type = mime_type_get(path);
+        send_response(fd, "HTTP/1.1 200 OK", MIMETYPE, filedata->data, filedata->size);
+        file_free(filestruct);
+    }
 }
 
 /**
@@ -167,6 +181,7 @@ void get_file(int fd, struct cache *cache, char *request_path)
  */
 char *find_start_of_body(char *header)
 {
+    (void)header;
     ///////////////////
     // IMPLEMENT ME! // (Stretch)
     ///////////////////
@@ -182,7 +197,6 @@ void handle_http_request(int fd, struct cache *cache)
     char method[128];
     char path[8192];
     sscanf(request, "%s %s", method, path);
-    printf(request);
     // Read request
     int bytes_recvd = recv(fd, request, request_buffer_size - 1, 0);
 
@@ -206,7 +220,7 @@ void handle_http_request(int fd, struct cache *cache)
         else {
             get_file(fd, cache, path);
         }
-    }
+    } else {}
     //    Check if it's /d20 and handle that special case
     //    Otherwise serve the requested file by calling get_file()
 
@@ -250,7 +264,6 @@ int main(void)
             perror("accept");
             continue;
         }
-        // resp_404(newfd);
         // Print out a message that we got the connection
         inet_ntop(their_addr.ss_family,
             get_in_addr((struct sockaddr *)&their_addr),
