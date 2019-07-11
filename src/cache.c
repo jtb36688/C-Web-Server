@@ -15,7 +15,7 @@ struct cache_entry *alloc_entry(char *path, char *content_type, void *content, i
     // ce->path = malloc(strlen(path) + 1);
     // ce->path = strcpy(path);
     ce->path = strdup(path);
-    ce->content_type = strdrup(content_type);
+    ce->content_type = strdup(content_type);
     ce->content = malloc(content_length);
     //need to use memcpy for content because it can be either a string OR a binary file;
     memcpy(ce->content, content, content_length);
@@ -150,7 +150,7 @@ void cache_put(struct cache *cache, char *path, char *content_type, void *conten
     // Free the cache entry
     // Ensure the size counter for number of entries in the cache is correct
     while(cache->cur_size > cache->max_size) {
-        struct cache_entry *old_tail = dllist_remove_tail;
+        struct cache_entry *old_tail = dllist_remove_tail(cache);
         hashtable_delete(cache->index, old_tail->path);
         free_entry(old_tail);
     }
@@ -162,7 +162,7 @@ void cache_put(struct cache *cache, char *path, char *content_type, void *conten
 struct cache_entry *cache_get(struct cache *cache, char *path)
 {
     // Attempt to find the cache entry pointer in the hash table
-    ce = hashtable_get(cache->index, path);
+    struct cache_entry *ce = hashtable_get(cache->index, path);
     // If not found, return NULL.
     if (ce == NULL)
     {

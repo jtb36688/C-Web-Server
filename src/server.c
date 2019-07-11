@@ -164,12 +164,12 @@ void get_file(int fd, struct cache *cache, char *request_path)
 
     if (filedata == NULL) {
         fprintf(stderr, "cannot find server file\n");
-        resp_404(newfd);
+        exit(1);
     }
     else {
-        mime_type = mime_type_get(path);
-        send_response(fd, "HTTP/1.1 200 OK", MIMETYPE, filedata->data, filedata->size);
-        file_free(filestruct);
+        mime_type = mime_type_get(filepath);
+        send_response(fd, "HTTP/1.1 200 OK", mime_type, filedata->data, filedata->size);
+        file_free(filedata);
     }
 }
 
@@ -220,7 +220,9 @@ void handle_http_request(int fd, struct cache *cache)
         else {
             get_file(fd, cache, path);
         }
-    } else {}
+    } else {
+        resp_404(fd);
+    }
     //    Check if it's /d20 and handle that special case
     //    Otherwise serve the requested file by calling get_file()
 
