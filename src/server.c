@@ -60,7 +60,7 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     struct tm * timeinfo;
     timeinfo = localtime(&unixtime);
 
-    sprintf(response, 
+    int response_length = sprintf(response, 
     "%s\n" 
     "Time: %s\n" 
     "Content-Type:%s\n" 
@@ -75,7 +75,6 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     body);
 
     // Send it all!
-    int response_length = strlen(response);
 
     int rv = send(fd, response, response_length, 0);
 
@@ -103,7 +102,7 @@ void get_d20(int fd)
     // int randomized = 1 + (r / buckets);
     // char numstring[10];
     // sprintf(randomized, "%d", numstring);
-    int randNum = rand() % 20;
+    int randNum = rand() % (20) + 1;
     char numstring[10];
     sprintf(numstring, "%d", randNum);
     send_response(fd, "HTTP/1.1 200 OK", "text/plain", numstring, sizeof(numstring));
@@ -157,20 +156,26 @@ void get_file(int fd, struct cache *cache, char *request_path)
     char filepath[4096];
     struct file_data *filedata; 
     char *mime_type;
-
+    struct cache_entry *cached_file = cache_get(cache, request_path);
     // Fetch the file named in the path
-    snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
-    filedata = file_load(filepath);
-
-    if (filedata == NULL) {
-        fprintf(stderr, "cannot find server file\n");
-        exit(1);
+    if (cached_file != NULL) {
+        return send_response(fd, "HTTP/1.1 200 OK", cached_file->content_type, cached_file->content, cached_file->content_length);   
     }
     else {
-        mime_type = mime_type_get(filepath);
-        send_response(fd, "HTTP/1.1 200 OK", mime_type, filedata->data, filedata->size);
-        file_free(filedata);
+        snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
+        filedata = file_load(filepath);
+        if (strcmp(request_path, "/" == 0)) {
+            snprintf(filepath, sizeof(filepath), "%s/index.html", SERVER_ROOT);
+            filedata = file_load(filepath);
+        }
+        if (filedata == NULL) {
+            return resp_404(fd);
+        }
     }
+    mime_type = mime_type_get(filepath);
+    cache_put(cache, request_path, mime_type, filedata->data, filedata->size);
+    send_response(fd, "HTTP/1.1 200 OK", mime_type, filedata->data, filedata->size);
+    file_free(filedata);
 }
 
 /**
