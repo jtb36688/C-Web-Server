@@ -54,12 +54,28 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     char response[max_response_size];
 
     // Build HTTP response and store it in response
+    time_t unixtime;
+    time(&unixtime);
 
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
+    struct tm * timeinfo;
+    timeinfo = localtime(&unixtime);
+
+    int response_length = sprintf(response, 
+    "%s\n" 
+    "Time: %s\n" 
+    "Content-Type:%s\n" 
+    "Content-Length:%d\n" 
+    "Connection: close\n" 
+    "\n" 
+    "%s",
+    header, 
+    asctime(timeinfo), 
+    content_type, 
+    content_length, 
+    body);
 
     // Send it all!
+
     int rv = send(fd, response, response_length, 0);
 
     if (rv < 0) {
@@ -76,7 +92,20 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
 void get_d20(int fd)
 {
     // Generate a random number between 1 and 20 inclusive
-    
+    // int r;
+    // int range = 20;
+    // int buckets = RAND_MAX / range;
+    // int limit = buckets * range;
+    // do {
+    //     r = rand();
+    // } while (r >= limit);
+    // int randomized = 1 + (r / buckets);
+    // char numstring[10];
+    // sprintf(randomized, "%d", numstring);
+    int randNum = rand() % (20) + 1;
+    char numstring[10];
+    sprintf(numstring, "%d", randNum);
+    send_response(fd, "HTTP/1.1 200 OK", "text/plain", numstring, sizeof(numstring));
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
@@ -119,9 +148,34 @@ void resp_404(int fd)
  */
 void get_file(int fd, struct cache *cache, char *request_path)
 {
+    (void)cache;
+
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
+    char filepath[4096];
+    struct file_data *filedata; 
+    char *mime_type;
+    struct cache_entry *cached_file = cache_get(cache, request_path);
+    // Fetch the file named in the path
+    if (cached_file != NULL) {
+        return send_response(fd, "HTTP/1.1 200 OK", cached_file->content_type, cached_file->content, cached_file->content_length);   
+    }
+    else {
+        snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
+        filedata = file_load(filepath);
+        if (strcmp(request_path, "/" == 0)) {
+            snprintf(filepath, sizeof(filepath), "%s/index.html", SERVER_ROOT);
+            filedata = file_load(filepath);
+        }
+        if (filedata == NULL) {
+            return resp_404(fd);
+        }
+    }
+    mime_type = mime_type_get(filepath);
+    cache_put(cache, request_path, mime_type, filedata->data, filedata->size);
+    send_response(fd, "HTTP/1.1 200 OK", mime_type, filedata->data, filedata->size);
+    file_free(filedata);
 }
 
 /**
@@ -132,6 +186,7 @@ void get_file(int fd, struct cache *cache, char *request_path)
  */
 char *find_start_of_body(char *header)
 {
+    (void)header;
     ///////////////////
     // IMPLEMENT ME! // (Stretch)
     ///////////////////
@@ -144,7 +199,9 @@ void handle_http_request(int fd, struct cache *cache)
 {
     const int request_buffer_size = 65536; // 64K
     char request[request_buffer_size];
-
+    char method[128];
+    char path[8192];
+    sscanf(request, "%s %s", method, path);
     // Read request
     int bytes_recvd = recv(fd, request, request_buffer_size - 1, 0);
 
@@ -161,7 +218,16 @@ void handle_http_request(int fd, struct cache *cache)
     // Read the first two components of the first line of the request 
  
     // If GET, handle the get endpoints
-
+    if(strcmp(method, "GET") == 0) {       
+        if (strcmp(path, "/d20") == 0) {
+            get_d20(fd);
+        }
+        else {
+            get_file(fd, cache, path);
+        }
+    } else {
+        resp_404(fd);
+    }
     //    Check if it's /d20 and handle that special case
     //    Otherwise serve the requested file by calling get_file()
 
@@ -169,6 +235,7 @@ void handle_http_request(int fd, struct cache *cache)
     // (Stretch) If POST, handle the post request
 }
 
+    
 /**
  * Main
  */
@@ -204,7 +271,6 @@ int main(void)
             perror("accept");
             continue;
         }
-
         // Print out a message that we got the connection
         inet_ntop(their_addr.ss_family,
             get_in_addr((struct sockaddr *)&their_addr),
